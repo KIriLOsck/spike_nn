@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 nn = SpikeNeuralNetwork(10, 2 , 1)
 
 train_data = [
-    [[1,0], [1]],
     [[0,1], [1]],
     [[1,1], [1]],
     [[0,0], [0]],
@@ -35,7 +34,7 @@ history = nn.training(2000, train_data, 0.2, 10)
 data = random.choice(train_data)
 results = []
 for _ in range(100):
-    os.system("cls")
+    os.system("clear")
     result = nn.safe_iteration(data[0])[0]
     results.append(result)
     print(data, result)

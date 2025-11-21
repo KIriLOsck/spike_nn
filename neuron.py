@@ -2,16 +2,20 @@ import random
 
 class Neuron:
     """Класс для представления нейрона в нейросети."""
-    def __init__(self, neurons_list):
+    def __init__(self, neurons_list, activates_history: int = 5):
         self.state = False
         self.links = []  # [индекс, возраст, вес]
         self.stair = 0.5    # Порог активации
         self.value = 0.0    # Мембранный потенциал
         self.activates = 0
         self.prev_state = False
+        self.last_activates = []
 
         self.nn = neurons_list
         self.id = len(neurons_list)
+
+        for i in range(activates_history):
+            self.last_activates.append(False)
 
     def __str__(self):
         out = ""
@@ -70,7 +74,7 @@ class Neuron:
 
     def activation(self):
         """Проверяет, не перевозбуждается ли нейрон, и создает новые ингибирующие связи если да."""
-        if self.prev_state and self.state and random.random() < self.activates * self.nn._DOPHAMIN / self.nn._ACTIVATION_DEVISOR:
+        if not False in self.last_activates and random.random() < self.activates / self.nn._ACTIVATION_DEVISOR:
             
             index = self.get_neuron()
             if index is None:
@@ -78,11 +82,13 @@ class Neuron:
            
             self.nn[index].add_link(self.id, self.nn._BASE_OLD, random.uniform(-0.1,0))
 
+    def get_activation_chain(n1, n2):
+        if n1.activates_histor
 
     def hebbs_rule(self):
         """Правило Хебба: нейроны активирующиеся вместе, связываются."""
         index = self.get_neuron()
-        if random.random() < self.activates * self.nn._DOPHAMIN / self.nn._ACTIVATION_DEVISOR and self.nn[index].state and self.nn[index].prev_state:
+        if random.random() < self.activates / self.nn._ACTIVATION_DEVISOR and self.nn[index].state and self.nn[index].prev_state:
             if index is None:
                 return
             
