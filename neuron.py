@@ -8,14 +8,14 @@ class Neuron:
         self.stair = 0.5    # Порог активации
         self.value = 0.0    # Мембранный потенциал
         self.activates = 0
-        self.prev_state = False
         self.last_activates = []
 
         self.nn = neurons_list
         self.id = len(neurons_list)
 
-        for i in range(activates_history):
+        for _ in range(activates_history):
             self.last_activates.append(False)
+
 
     def __str__(self):
         out = ""
@@ -23,7 +23,27 @@ class Neuron:
             out += str(i) + '\n'
         out += f"Value: {self.value}, State: {self.state}"
         return out
+    
 
+    def need_correction(self):
+        if random.random() < self.activates / self.nn._ACTIVATION_DEVISOR:
+            self.activates -= self.nn._ACTIVATION_DEVISOR
+            return True
+        else:
+            return False
+        
+    def is_in_refract(self):
+        if self.nn._REFRACT_PERIOD > len(self.last_activates):
+            raise RuntimeError("Impossible to determine the refract period: the activation history too short")
+        
+        if True in self.last_activates[-self.nn._REFRACT_PERIOD:]:
+            return True
+        else:
+            return False
+        
+    def next_state(self, state: bool):
+        self.last_activates.pop(0)
+        self.last_activates.append(state)
 
     def add_link(self, index, old, weight):
         """
@@ -66,6 +86,7 @@ class Neuron:
         else:
             raise RuntimeError("Index out of range!")
 
+
     def get_neuron(self):
         """Получает индекс случайного нейрона в пределах радиуса активации."""
         varible_neurons = self.get_radius()
@@ -74,7 +95,7 @@ class Neuron:
 
     def activation(self):
         """Проверяет, не перевозбуждается ли нейрон, и создает новые ингибирующие связи если да."""
-        if not False in self.last_activates and random.random() < self.activates / self.nn._ACTIVATION_DEVISOR:
+        if not False in self.last_activates and self.need_correction():
             
             index = self.get_neuron()
             if index is None:
@@ -82,32 +103,39 @@ class Neuron:
            
             self.nn[index].add_link(self.id, self.nn._BASE_OLD, random.uniform(-0.1,0))
 
-    def get_activation_chain(n1, n2):
-        if n1.activates_histor
+
+    def get_activation_chain(self, n1, n2):
+        """Узнаёт активировались ли нейроны последовательно и возвращает порядок активации или None"""
+        if n1.last_activates[:-1] == n2.last_activates[1:]: # [1 0 0 1 | 0] ... [0 | 1 0 0 1]
+            return (n2 , n1) # n1 зависит от n2
+        elif n2.last_activates[:-1] == n1.last_activates[1:]:
+            return (n1 , n2)
+        else:
+            return None
+
 
     def hebbs_rule(self):
         """Правило Хебба: нейроны активирующиеся вместе, связываются."""
-        index = self.get_neuron()
-        if random.random() < self.activates / self.nn._ACTIVATION_DEVISOR and self.nn[index].state and self.nn[index].prev_state:
-            if index is None:
-                return
-            
-            if self.prev_state and self.nn[index].state:
-                self.add_link(index, self.nn._BASE_OLD, random.uniform(0,1) * self.nn._DOPHAMIN)
-            elif self.state and self.nn[index].prev_state:
-                self.nn[index].add_link(self.id, self.nn._BASE_OLD, random.uniform(0,1) * self.nn._DOPHAMIN)
-            else:
-                if random.random() < 0.5:
-                    self.nn[index].add_link(self.id, self.nn._BASE_OLD, random.uniform(0,1) * self.nn._DOPHAMIN)
-                else:
-                    self.add_link(index, self.nn._BASE_OLD, random.uniform(0,1) * self.nn._DOPHAMIN)
+        connected = self.get_radius()
+
+        for index in connected:
+
+            if self.need_correction():
+                chain = self.get_activation_chain(self, self.nn[index])
+                if chain is None:
+                    continue
+
+                for n in range(len(chain) - 1): # от последнего нейрона связь не создаём
+                    chain[n].add_link(chain[n + 1].id, self.nn._BASE_OLD, self.nn._BASE_STRENGTH)
 
 
-    def tick(self):
+    def destroy(self):
         """Обновляет состояние нейрона, уменьшая возраст связей и удаляя старые связи."""
         rem = []
+        age_step = 2.0 - self.nn.DOPHAMIN
+        age_step = max(0.1, min(3.0, age_step))  # защита от экстремумов
         for i in self.links:
-            i[1] -= 1
+            i[1] -= age_step
             if i[1] < 0:
                 rem.append(i)
         for i in rem:
@@ -117,64 +145,40 @@ class Neuron:
     def reLU(self):
         """Функция активации ReLU: если значение больше порога, нейрон активируется."""
 
-        self.value *= 0.95
-        if self.value > self.stair:
-            self.prev_state = True if self.state else False
-            self.state = True
-            self.value -= self.stair
-            self.activates += 1
+        base_decay = 0.95
+        # Чем выше серотонин, тем быстрее затухание (стабилизация)
+        decay_factor = base_decay * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.2)
+        decay_factor = max(0.8, min(0.99, decay_factor))  # затухание в пределах 1% - 20% за такт
+        self.value *= decay_factor
 
+        noise = 0.0
+        if self.nn.SEROTONIN < 1.0:
+            # Шум обратно пропорционален уровню серотонина
+            noise_scale = (1.0 - self.nn.SEROTONIN) * 0.2  # макс 0.2 при SER = 0
+            noise = random.uniform(-noise_scale, noise_scale)
+
+        effective_stair = self.stair * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5)
+        effective_stair = max(0.1, effective_stair)  # не допускаем слишком низкий порог
+
+        total_input = self.value + noise
+        if total_input > effective_stair and not self.is_in_refract():
+            self.next_state(True)
+            self.state = True
+            self.value -= effective_stair  # -= self.stair
+            self.activates += 1
             if self.id not in self.nn.active_neurons:
                 self.nn.active_neurons.append(self.id)
         else:
-            self.prev_state = True if self.state else False
+            self.next_state(False)
             self.state = False
-
             if self.id in self.nn.active_neurons:
                 self.nn.active_neurons.remove(self.id)
-
     
-    def get_connect(self):
-        varible_index = self.get_connect()
-        connected = []
-        for n in varible_index:
-            for l in self.nn[n].links:
-                if l[0] == self.id:
-                    connected.append(n)
-        return connected
-    
-    def get_useful(self):
-        varible_index = self.get_connect()
-        useful = []
-        for i in varible_index:
-            if self.nn[i].state:
-                useful.append(i)
 
-    def fire(self, save=False, chain_activation=False):
+    def fire(self, save=False):
         """Если нейрон активен, передаёт значение по связям."""
-        if self.state and not chain_activation:
+        if self.state:
+            dopamine_gain = max(0.5, min(1.5, self.nn.DOPHAMIN)) #усиление от -50% до 50%
             for i in self.links:
-                if i[1] >= 10:
-                    self.nn[i[0]].value += i[2]
-                    i[1] += 0 if save else 1
-
-        try:
-            if chain_activation:
-                # print(self.value)
-                if self.state:
-                    for i in self.links:
-                        self.nn[i[0]].value += i[2]
-                        i[1] += 1
-                        self.nn[i[0]].fire(False, True)
-                        with open("log.txt", "w") as file:
-                            file.write(str(self.nn))
-                            
-                    self.reLU()
-                    self.hebbs_rule()
-                    self.activation()
-                    self.tick()
-
-        except RecursionError:
-            pass
-        except PermissionError:
-            pass
+                self.nn[i[0]].value += i[2] * dopamine_gain
+                i[1] += 0 if save else 1

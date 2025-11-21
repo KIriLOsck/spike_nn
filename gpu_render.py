@@ -15,8 +15,8 @@ BLUE = (1, 0, 0)
 RED = (0, 1, 0)
 BLACK = (0, 0, 0)
 
-NEURON = (90/255, 90/255, 90/255, 3)
-NEURON_L = (1, 200/255, 55/255, 8)
+NEURON = (90/255, 90/255, 90/255, 3.0)
+NEURON_L = (1.0, 200/255, 55/255, 1.0)
 
 HEIGHT, WIDTH = 1000, 1900
 
@@ -26,7 +26,7 @@ def update_points(time_q, nn, points=None):
 
         if points is None:
             coords = generate_circles(NEURONS_COUNT, 0.0001)
-            points = [(x, y, *NEURON_L) if i in nn.active_neurons else (x, y, *NEURON) for i, (x, y) in enumerate(coords)]
+            points = [(x, y, *NEURON_L, i) if i in nn.active_neurons else (x, y, *NEURON, i) for i, (x, y) in enumerate(coords)]
             new_points = points
         else:
             new_points = []
@@ -40,7 +40,7 @@ def update_points(time_q, nn, points=None):
 def main():
 
     points = None
-    time_val = 0
+    time_val = 0.1
 
     # Инициализация GLFW =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     if not glfw.init():
@@ -73,29 +73,51 @@ def main():
     # else:
     #     new_y -= 0.2
 
-    vertex_shader_source = """
+    vertex_shader_source = vertex_shader_source = """
     #version 330 core
-    layout (location = 0) in vec2 aPos;
+    layout (location = 0) in vec2 aPos;  // Можно оставить для совместимости, но не используем
     layout (location = 1) in vec3 aColor;
-    layout (location = 2) in vec2 aSizeIndex;
+    layout (location = 2) in vec2 aSizeIndex; // x: size, y: index
 
     out vec3 ourColor;
-    uniform float timeValue;  
+    uniform float timeValue;
+
+    const float PI = 3.141592653589793;
 
     void main() {
-        float r = 0.1 + (aSizeIndex.y % 30) / 100;
+        float i = aSizeIndex.y; // индекс точки
+        float r = 0.1 + mod(i, 30.0) / 100.0;
         
-        if (aSizeIndex.y % 10 != 0) {
-            timeValue = timeValue * (aSizeIndex.y % 10)
-        } else {
-            timeValue = timeValue * 1.001
+        // Вычисляем модифицированное время для этой точки
+        float modifiedTime = timeValue;
+        if (mod(i, 10.0) != 0.0) {
+            modifiedTime *= mod(i, 10.0);
         }
-
-        gl_Position = vec4(aPos, 0.0, 1.0);
+        // else - оставляем как есть (умножение на 1)
+        
+        // Основное вычисление позиции
+        float d = 2.0 * PI * cos(modifiedTime + i) + 0.1;
+        vec2 circle_pos = vec2(r * cos(d), r * sin(d));
+        
+        // Смещения в зависимости от индекса
+        vec2 offset = vec2(0.0);
+        float index_mod = mod(i, 4.0);
+        if (index_mod == 1.0) {
+            offset = vec2(0.2, 0.0);
+        } else if (index_mod == 2.0) {
+            offset = vec2(-0.2, 0.0);
+        } else if (index_mod == 3.0) {
+            offset = vec2(0.0, 0.2);
+        } else {
+            offset = vec2(0.0, -0.2);
+        }
+        
+        vec2 final_pos = circle_pos + offset + aPos;
+        gl_Position = vec4(final_pos, 0.0, 1.0);
         gl_PointSize = aSizeIndex.x;
         ourColor = aColor;
     }
-    """
+"""
 
     fragment_shader_source = """
     #version 330 core
@@ -110,7 +132,7 @@ def main():
     fragment_shader = compile_shader(fragment_shader_source, gl.GL_FRAGMENT_SHADER)
 
     shader_program = gl.glCreateProgram()
-    time_value_loc = glGetUniformLocation(shader_program, "timeValue")
+
     gl.glAttachShader(shader_program, vertex_shader)
     gl.glAttachShader(shader_program, fragment_shader)
     gl.glLinkProgram(shader_program)
@@ -121,26 +143,32 @@ def main():
     gl.glBindVertexArray(VAO)
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, VBO)
 
-    initial_points = np.array([(0,0,0,0,0,0)] * len(nn), dtype=np.float32)
+    initial_points = np.array([(0,0,0,0,0,0,0)] * len(nn), dtype=np.float32)
     gl.glBufferData(gl.GL_ARRAY_BUFFER, initial_points.nbytes, initial_points, gl.GL_DYNAMIC_DRAW)
 
-    gl.glVertexAttribPointer(0, 2, gl.GL_FLOAT, gl.GL_FALSE, 6 * sizeof(gl.GLfloat), c_void_p(0))
+    gl.glVertexAttribPointer(0, 2, gl.GL_FLOAT, gl.GL_FALSE, 7 * sizeof(gl.GLfloat), c_void_p(0))
     gl.glEnableVertexAttribArray(0)
 
-    gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 6 * sizeof(gl.GLfloat), c_void_p(2 * sizeof(gl.GLfloat)))
+    gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 7 * sizeof(gl.GLfloat), c_void_p(2 * sizeof(gl.GLfloat)))
     gl.glEnableVertexAttribArray(1)
 
-    gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 6 * sizeof(gl.GLfloat), c_void_p(5 * sizeof(gl.GLfloat)))
+    gl.glVertexAttribPointer(2, 2, gl.GL_FLOAT, gl.GL_FALSE, 7 * sizeof(gl.GLfloat), c_void_p(5 * sizeof(gl.GLfloat)))
     gl.glEnableVertexAttribArray(2)
+
+    gl.glUseProgram(shader_program)
+    time_value_loc = glGetUniformLocation(shader_program, "timeValue")
+
+    points = update_points(time_val, nn, points)
+    print(points[:4])
 
     while not glfw.window_should_close(window):
         # Обработка событий
         if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
             break
 
-        nn.neurons[1].value += 0.01
-        nn.neurons[1].reLU()
-        points = update_points(time_val, nn, points)
+        # nn.neurons[1].value += 0.01
+        # nn.neurons[1].reLU()
+
         glUniform1f(time_value_loc, time_val)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, VBO)
@@ -149,7 +177,6 @@ def main():
         gl.glClearColor(1.0, 1.0, 1.0, 1.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
-        gl.glUseProgram(shader_program)
         gl.glBindVertexArray(VAO)
         gl.glDrawArrays(gl.GL_POINTS, 0, len(points))
 
@@ -168,7 +195,7 @@ def main():
         #         line_width = 2 if abs(weight) > 0.5 else 1
                 # draw_line(circles[i], circles[target_index], color, line_width)
 
-        time_val += 0.00001
+        time_val += 0.000001
 
         glfw.swap_buffers(window)
         glfw.poll_events()

@@ -4,19 +4,22 @@ class SpikeNeuralNetwork:
     """Класс для представления нейросети из нейронов."""
     def __init__(self, num_neurons, input_size=0, output_size=0):
 
+        # нейромедиаторы
+        self.DOPHAMIN = 1.0
+        self.SEROTONIN = 1.0
+
         # супер параметры
-        self._DOPHAMIN = 1 #влияет на запоминание
         self._ACTIVATION_RADIUS = 10 # предел расстояния для связи нейронов
-        self._ACTIVATION_DEVISOR = 5 # коофицент вероятности активации нейрона
-        self._ACTIVATION_MULTIPLIER = 0.01 # влияет на шанс создания связи
+        self._ACTIVATION_DEVISOR = 5 # обратно пропорционален вероятности активации нейрона
+        self._BASE_STRENGTH = 0.01 # вес новой связи по умолчанию
         self._BASE_OLD = 5 # возраст новой связи по умолчанию
         self._REFRACT_PERIOD = 0
 
         # параметры обучения
         self.patience = 20  # Количество итераций без улучшения перед уменьшением lr
         self.learning_rate = 0.01
-        self.min_dofamine = 0.05  # Минимальное значение коэффициента обучения
-        self.max_dofamine = 0.8    # Максимальное значение коэффициента обучения
+        self.min_dofamine = 0.01  # Минимальное значение коэффициента обучения
+        self.max_dofamine = 1.99    # Максимальное значение коэффициента обучения
 
         self.neurons = []
         self.num_neurons = num_neurons
@@ -50,7 +53,7 @@ class SpikeNeuralNetwork:
         return output
     
     def modify_dophamin(self, value):
-        self._DOPHAMIN += value
+        self.DOPHAMIN += value
 
     def get_outputs(self):
         return [neuron.value for neuron in self.output_neurons]
@@ -70,7 +73,7 @@ class SpikeNeuralNetwork:
         """Производит один шаг в нейросети, обновляя состояние нейронов и веса."""
 
         for neuron in self.neurons:
-            neuron.tick()
+            neuron.destroy()
 
         if inputs is not None:
             for i, value in enumerate(inputs):
