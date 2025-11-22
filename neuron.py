@@ -155,7 +155,7 @@ class Neuron:
         if self.nn.SEROTONIN < 1.0:
             # Шум обратно пропорционален уровню серотонина
             noise_scale = (1.0 - self.nn.SEROTONIN) * 0.2  # макс 0.2 при SER = 0
-            noise = random.uniform(-noise_scale, noise_scale)
+            noise = random.uniform(0, noise_scale)
 
         effective_stair = self.stair * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5)
         effective_stair = max(0.1, effective_stair)  # не допускаем слишком низкий порог

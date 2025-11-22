@@ -13,7 +13,7 @@ class SpikeNeuralNetwork:
         self._ACTIVATION_DEVISOR = 5 # обратно пропорционален вероятности активации нейрона
         self._BASE_STRENGTH = 0.01 # вес новой связи по умолчанию
         self._BASE_OLD = 5 # возраст новой связи по умолчанию
-        self._REFRACT_PERIOD = 0
+        self._REFRACT_PERIOD = 2
 
         # параметры обучения
         self.patience = 20  # Количество итераций без улучшения перед уменьшением lr

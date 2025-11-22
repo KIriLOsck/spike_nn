@@ -3,6 +3,8 @@ import random, time, os
 # import matplotlib.pyplot as plt
 
 nn = SpikeNeuralNetwork(10, 2 , 1)
+nn.SEROTONIN = 0.01
+nn._ACTIVATION_RADIUS = 3
 
 train_data = [
     [[0,1], [1]],
@@ -32,8 +34,13 @@ train_data = [
 
 data = random.choice(train_data)
 results = []
+
+for _ in range(1000):
+    nn.iteration(random.choice(data))
+    random.choice(nn).value += 0.4
+
 for _ in range(100):
-    os.system("cls")
+    os.system("cls") if os.name == "windows" else os.system("clear")
     result = nn.iteration(data[0])[0]
     results.append(result)
     print(data, result)
