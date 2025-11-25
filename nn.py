@@ -13,7 +13,7 @@ class SpikeNeuralNetwork:
         self._ACTIVATION_DEVISOR = 5 # обратно пропорционален вероятности активации нейрона
         self._BASE_STRENGTH = 0.01 # вес новой связи по умолчанию
         self._BASE_OLD = 5 # возраст новой связи по умолчанию
-        self._REFRACT_PERIOD = 2
+        self._REFRACT_PERIOD = 0
 
         # параметры обучения
         self.patience = 20  # Количество итераций без улучшения перед уменьшением lr
@@ -44,12 +44,13 @@ class SpikeNeuralNetwork:
         return len(self.neurons)
     
     def __str__(self):
-        output = "|  Индекс  | Значение  | Среднее связей\n"
+        output = "|  Индекс  | Значение  |   Среднее связей   | Состояние\n"
         for neuron in self.neurons:
             output += "| " + str(neuron.id) + (9 - len(str(neuron.id)))*" "
             output += "| " + str(round(float(neuron.value), 2))
             output += (10 - len(str(round(neuron.value + 0.1, 2))))*" "
-            output += "| " + str(sum(link[2] for link in neuron.links) / (len(neuron.links) or 1)) + "\n"
+            output += "| " + str(sum(link[2] for link in neuron.links) / (len(neuron.links) or 1))
+            output += "| " + str(neuron.state) + "\n"
         return output
     
     def modify_dophamin(self, value):
@@ -69,7 +70,7 @@ class SpikeNeuralNetwork:
                 for link in neuron.links:
                     link[2] /= total_abs_weight
     
-    def iteration(self, inputs=None):
+    def iteration(self, iteration: int, inputs=None):
         """Производит один шаг в нейросети, обновляя состояние нейронов и веса."""
 
         for neuron in self.neurons:
@@ -85,7 +86,7 @@ class SpikeNeuralNetwork:
         for neuron in self.neurons:
             neuron.activation()
             neuron.hebbs_rule()
-            neuron.reLU()
+            neuron.reLU(iteration)
             neuron.fire()
 
         return [neuron.state for neuron in self.output_neurons]

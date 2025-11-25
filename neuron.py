@@ -9,6 +9,7 @@ class Neuron:
         self.value = 0.0    # Мембранный потенциал
         self.activates = 0
         self.last_activates = []
+        self.spike_iteration = -1
 
         self.nn = neurons_list
         self.id = len(neurons_list)
@@ -64,7 +65,7 @@ class Neuron:
 
         for i in self.links:
             if i[0] == index:
-                i[2] = (weight + i[2]) / 2
+                i[2] = weight + i[2]
                 i[1] += self.nn._BASE_OLD
                 return
 
@@ -95,7 +96,7 @@ class Neuron:
 
     def activation(self):
         """Проверяет, не перевозбуждается ли нейрон, и создает новые ингибирующие связи если да."""
-        if not False in self.last_activates and self.need_correction():
+        if self.value > self.nn._ACTIVATION_DEVISOR:
             
             index = self.get_neuron()
             if index is None:
@@ -104,28 +105,44 @@ class Neuron:
             self.nn[index].add_link(self.id, self.nn._BASE_OLD, random.uniform(-0.1,0))
 
 
-    def get_activation_chain(self, n1, n2):
+    def get_activation_chain(self, neurons):
         """Узнаёт активировались ли нейроны последовательно и возвращает порядок активации или None"""
-        if n1.last_activates[:-1] == n2.last_activates[1:]: # [1 0 0 1 | 0] ... [0 | 1 0 0 1]
-            return (n2 , n1) # n1 зависит от n2
-        elif n2.last_activates[:-1] == n1.last_activates[1:]:
-            return (n1 , n2)
-        else:
-            return None
+
+        sorted_neurons = []
+        for neuron in neurons: 
+            if neuron.spike_iteration == -1:
+                continue
+
+            sorted_neurons.append(neuron)
+        
+        sorted_neurons.sort(key=lambda n: n.spike_iteration)
+        # neurons.times: [99, 22, 74, 12, -1, -1, 69] -> [12, 22, 69, 74, 99]
+        # neurons.index: [00, 01, 02, 03, 04, 05, 06] -> [03, 01, 06, 02, 00]
+        return sorted_neurons if sorted_neurons else None
 
 
     def hebbs_rule(self):
         """Правило Хебба: нейроны активирующиеся вместе, связываются."""
         connected = self.get_radius()
+        self_index = None
 
         for index in connected:
-
             if self.need_correction():
-                chain = self.get_activation_chain(self, self.nn[index])
+                chain = self.get_activation_chain([self] + [self.nn[i] for i in self.get_radius()])
+                if self in chain:
+                    self_index = chain.index(self)
+
                 if chain is None:
+                    continue
+                
+                if not self_index is None:
+                    chain = chain[self_index + 1:]
+                    print(chain)
+                else:
                     continue
 
                 for n in range(len(chain) - 1): # от последнего нейрона связь не создаём
+                    print("linked!")
                     chain[n].add_link(chain[n + 1].id, self.nn._BASE_OLD, self.nn._BASE_STRENGTH)
 
 
@@ -142,7 +159,7 @@ class Neuron:
             self.links.pop(self.links.index(i))
 
 
-    def reLU(self):
+    def reLU(self, iteration):
         """Функция активации ReLU: если значение больше порога, нейрон активируется."""
 
         base_decay = 0.95
@@ -160,8 +177,9 @@ class Neuron:
         effective_stair = self.stair * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5)
         effective_stair = max(0.1, effective_stair)  # не допускаем слишком низкий порог
 
-        total_input = self.value + noise
-        if total_input > effective_stair and not self.is_in_refract():
+        self.value += noise
+        if self.value > effective_stair and not self.is_in_refract():
+            self.spike_iteration = iteration
             self.next_state(True)
             self.state = True
             self.value -= effective_stair  # -= self.stair
