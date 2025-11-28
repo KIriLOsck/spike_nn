@@ -176,7 +176,7 @@ class Neuron:
                     continue
 
                 for n in range(len(chain) - 1): # от последнего нейрона связь не создаём
-                    chain[n]._add_link(chain[n + 1].id, self.nn._BASE_OLD, self.nn._BASE_STRENGTH)
+                    chain[n]._add_link(chain[n + 1].id, self.nn._BASE_OLD * max(0.01, self.nn.DOPHAMIN - 1), self.nn._BASE_STRENGTH)
 
 
     def destroy(self) -> None:
@@ -186,7 +186,7 @@ class Neuron:
 
         rem = []
         age_step = self.nn.DOPHAMIN - 1
-        age_step = max(-1, min(0.0, age_step))  # защита от экстремумов
+        age_step = max(-1, min(-0.01, age_step))  # защита от экстремумов
         for i in self.links:
             i[1] += age_step
             if i[1] < 0:
@@ -242,4 +242,4 @@ class Neuron:
         if self.state:
             for i in self.links:
                 self.nn[i[0]].value = max(i[2] + self.nn[i[0]].value, -1)
-                i[1] += 1 * max(0.0, min(2.0, self.nn.DOPHAMIN))
+                i[1] += max(0.0, self.nn.DOPHAMIN - 1)

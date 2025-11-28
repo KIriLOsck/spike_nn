@@ -5,8 +5,9 @@ import random, time, os
 nn = SpikeNeuralNetwork(15, 3 , 2)
 nn.SEROTONIN = 0.1
 nn._ACTIVATION_RADIUS = 3
-nn._BASE_STRENGTH = 0.03
-nn.learning_rate = 0.9
+nn._BASE_STRENGTH = 0.02
+nn._BASE_OLD = 10
+nn.learning_rate = 0.99
 
 train_data = [
     [[1, 1, 1],[1, 0]],
@@ -111,7 +112,7 @@ results2 = []
 results3 = []
 
 l = 0
-for _ in range(1000):
+for _ in range(10):
     batch = random.choice(train_data)
     for _ in range(10):
         nn.iteration(l, batch[0])
@@ -119,8 +120,10 @@ for _ in range(1000):
             nn.DOPHAMIN += 0.5
         else:
             nn.DOPHAMIN -= 0.1
+        print(nn, flush=True)
+        time.sleep(0.1)
         l += 1
-    print(nn.DOPHAMIN)
+        print(nn.DOPHAMIN)
 
 nn.SEROTONIN = 2.0
 nn.DOPHAMIN = 1.0
@@ -134,14 +137,13 @@ for i in range(0, 100, 1):
     results1.append(
         result1
     )
-    #print(nn, flush=True)
-    #time.sleep(0.1)
 
 for i in range(100, 200, 1):
     result2 = nn.iteration(i, data2[0], reLU=True)
     results2.append(
         result2
     )
+
 
 for i in range(200, 300, 1):
     result3 = nn.iteration(i, data3[0], reLU=True)
@@ -175,7 +177,6 @@ print(nn)
 print(data, i)
 print(data2, oi)
 print(data3, ai)
-
 # plot_loss = [[], []]
 # plot_dofamine = [[], []]
 # plot_min_loss = [[], []]
