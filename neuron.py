@@ -195,6 +195,31 @@ class Neuron:
             self.links.pop(self.links.index(i))
 
 
+    def noise(self):
+        noise = 0.0
+        if self.nn.SEROTONIN < 1.0:
+            # Шум обратно пропорционален уровню серотонина
+            noise_scale = (1.0 - self.nn.SEROTONIN) * 0.2  # макс 0.2 при SER = 0
+            noise = random.uniform(0, noise_scale)
+
+        return noise
+    
+
+    def effective_stair(self):
+        effective_stair = self.stair * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5)
+        effective_stair = max(0.1, effective_stair)
+
+        return effective_stair
+    
+
+    def decay(self):
+        base_decay = 0.95
+        # Чем выше серотонин, тем быстрее затухание (стабилизация)
+        decay_factor = base_decay * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.2)
+        decay_factor = max(0.8, min(0.99, decay_factor))  # затухание в пределах 1% - 20% за такт
+        self.value *= decay_factor
+
+
     def reLU(self, iteration: int) -> None:
         """
         Модифицированная функция активации ReLU: если значение больше порога, нейрон активируется.
@@ -202,22 +227,10 @@ class Neuron:
         Принимает текущий уровень итерации для упрощённого расчёта цепочек активации.
         """
 
-        base_decay = 0.95
-        # Чем выше серотонин, тем быстрее затухание (стабилизация)
-        decay_factor = base_decay * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.2)
-        decay_factor = max(0.8, min(0.99, decay_factor))  # затухание в пределах 1% - 20% за такт
-        self.value *= decay_factor
-
-        noise = 0.0
-        if self.nn.SEROTONIN < 1.0:
-            # Шум обратно пропорционален уровню серотонина
-            noise_scale = (1.0 - self.nn.SEROTONIN) * 0.2  # макс 0.2 при SER = 0
-            noise = random.uniform(0, noise_scale)
-
-        effective_stair = self.stair * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5)
-        effective_stair = max(0.1, effective_stair)
-
-        self.value += noise
+        self.value += self.noise()
+        effective_stair = self.effective_stair()
+        self.decay()
+        
         if self.value > effective_stair and not self.is_in_refract():
             self.spike_iteration = iteration
             self._next_state(True)
