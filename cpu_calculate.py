@@ -1,177 +1,126 @@
 from nn import SpikeNeuralNetwork
-import random, time
+import random, time, json
+from datetime import datetime
+from multiprocessing import Pool
+
 # import matplotlib.pyplot as plt
 
-nn = SpikeNeuralNetwork(15, 3 , 2)
-nn.SEROTONIN = 0.5
-nn._ACTIVATION_RADIUS = 3
-nn._BASE_STRENGTH = 0.02
-nn._BASE_OLD = 10
-nn.learning_rate = 0.8
+# nn = SpikeNeuralNetwork(10, 3 , 2)
+# nn.SEROTONIN = 0.1
+# nn._ACTIVATION_RADIUS = 3
+# nn._BASE_STRENGTH = 0.01
+# nn._BASE_OLD = 25
+# nn.learning_rate = 0.5
 
-train_data = [
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
+# train_data = [
+#     [[1, 1, 1],[1, 0]],
+#     [[1, 1, 0],[0, 1]],
+#     [[1, 0, 0],[0, 1]],
+#     [[1, 1, 1],[1, 0]],
+#     [[0, 1, 0],[0, 1]],
+#     [[0, 0, 1],[0, 1]],
+#     [[1, 1, 1],[1, 0]],
+#     [[0, 1, 1],[0, 1]],
+#     [[1, 1, 1],[1, 0]],
+#     [[1, 1, 1],[1, 0]]
+# ]
 
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 1],[1, 0]],
-    [[1, 1, 0],[0, 1]],
-    [[1, 0, 0],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 0],[0, 1]],
-    [[0, 0, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-    [[0, 1, 1],[0, 1]],
-    [[1, 1, 1],[1, 0]],
-]
+# nn.train(train_data, 100, 10)
+# print(nn)
 
-data = random.choice(train_data)
+# nn.SEROTONIN = 2.0
+# nn.DOPHAMIN = 1.0
 
-def test_result(batch):
-    for i in nn:
-        i.spike_itertion = -1
-        i.value = 0.0
+# print("Проверка на случайных данных...")
+# accuratly = []
+# for _ in range(5):
+#     data = random.choice(train_data)
+#     result = nn.test_result(data)[0]
+#     print(data[0], end=" ")
+#     print(f"Точность: {result}%")
+#     accuratly.append(result)
 
-    results = []
-    for i in range(0, 100, 1):
-        result = nn.iteration(i, batch[0], reLU=True)
-        results.append(
-            result
-        )
+# print(f"Итоговая точность: {sum(accuratly) / len(accuratly)}")
 
-    spikes = [0 for _ in range(len(result))]
-    for out in results:
-        for spike in range(len(out)):
-            spikes[spike] += 1 if out[spike] else 0
+def dataWorker(i):
+    start = datetime.now()
 
-    spikes_count = sum(spikes)
-    correct = 0
+    neurons = random.randint(10, 250)
+    radius = random.randint(2, neurons // 2)
+    serotonin = random.uniform(0, 1)
+    rate = random.uniform(0, 1)
+    strenght = random.uniform(0, 1)
+    old = random.uniform(0, 100)
+    iterations = random.randint(1, 100)
+    iter_step = random.randint(1, 100)
 
-    for i in batch[1]:
-        if i:
-            correct += 1
+    nn = SpikeNeuralNetwork(neurons, 3, 2)
+    nn.SEROTONIN = serotonin
+    nn.learning_rate = rate
 
-    maximals = [0 for i in range(correct)]
+    nn._ACTIVATION_RADIUS = radius
+    nn._BASE_STRENGTH = strenght
+    nn._BASE_OLD = old
 
-    maximum = 0
-    for i in spikes:
-        if maximum < i:
-            maximum = i
-            maximals.pop(0)
-            maximals.append(i)
+    train_data = [
+        [[1, 1, 1],[1, 0]],
+        [[1, 1, 0],[0, 1]],
+        [[1, 0, 0],[0, 1]],
+        [[1, 1, 1],[1, 0]],
+        [[0, 1, 0],[0, 1]],
+        [[0, 0, 1],[0, 1]],
+        [[1, 1, 1],[1, 0]],
+        [[0, 1, 1],[0, 1]],
+        [[1, 1, 1],[1, 0]],
+        [[1, 1, 1],[1, 0]]
+    ]
 
-    correct_spikes = 0
+    nn.train(train_data, iterations, iter_step)
 
-    for result, value in zip(batch[1], spikes):
-        if result:
-            if value in maximals:
-                correct_spikes += value
+    accuratly = []
+    for _ in range(5):
+        data = random.choice(train_data)
+        result = nn.test_result(data)[0]
+        accuratly.append(result)
 
-    return round((correct_spikes / (spikes_count or 1)) * 100, 1), spikes
+    mid_accuratly = sum(accuratly) / len(accuratly)
 
-l = 0
-for _ in range(10):
-    batch = random.choice(train_data)
-    for i in range(10):
-        nn.iteration(l, batch[0])
-        if i % 5 == 0:
-            if nn.get_outputs(reLU=True) == batch[1]:
-                nn.DOPHAMIN += 0.5
-            else:
-                nn.DOPHAMIN -= 0.1
-        print(nn, flush=True)
-        time.sleep(0)
-        l += 1
-        print(nn.DOPHAMIN)
+    if sum(accuratly) % 50 == 0:
+        mid_accuratly = 0
 
-print(nn)
+    work_time = str(datetime.now() - start)
 
-nn.SEROTONIN = 2.0
-nn.DOPHAMIN = 1.0
+    results = {
+        "neurons": neurons,
+        "radius": radius,
+        "serotonin": serotonin,
+        "rate": rate,
+        "strenght": strenght,
+        "old": old,
+        "iterations": iterations,
+        "iter_step": iter_step,
+        "time": work_time,
+        "mid_accuratly": mid_accuratly,
+        "accuratly": accuratly
+            }
+    
+    results = json.dumps(results) + ",\n\t"
 
-print("Проверка на случайных данных...")
-for _ in range(5):
-    data = random.choice(train_data)
-    print(data[0], end=" ")
-    print(f"Точность: {test_result(data)[0]}%")
+    while 1:
+        try:
+            with open("log.json", "a") as file:
+                file.write(results)
+
+            print(i)
+            return
+
+        except:
+            time.sleep(random.uniform(0, 10))
+            continue
+
+if __name__ == "__main__":
+    with Pool(processes=8) as pool:
+        results = pool.map(dataWorker, range(1000))
 
 # plot_loss = [[], []]
 # plot_dofamine = [[], []]

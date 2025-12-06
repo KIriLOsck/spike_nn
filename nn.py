@@ -1,4 +1,5 @@
 from neuron import Neuron
+import random
 
 class SpikeNeuralNetwork:
     """Класс для представления нейросети из нейронов."""
@@ -124,3 +125,58 @@ class SpikeNeuralNetwork:
                     self.input_neurons[i].value = value
                 else:
                     raise RuntimeError("Value not associated with any input neuron.")
+                
+    def test_result(self, batch):
+        for i in self:
+            i.spike_itertion = -1
+            i.value = 0.0
+
+        results = []
+        for i in range(0, 100, 1):
+            result = self.iteration(i, batch[0], reLU=True)
+            results.append(
+                result
+            )
+
+        spikes = [0 for _ in range(len(result))]
+        for out in results:
+            for spike in range(len(out)):
+                spikes[spike] += 1 if out[spike] else 0
+
+        spikes_count = sum(spikes)
+        correct = 0
+
+        for i in batch[1]:
+            if i:
+                correct += 1
+
+        maximals = [0 for i in range(correct)]
+
+        maximum = 0
+        for i in spikes:
+            if maximum < i:
+                maximum = i
+                maximals.pop(0)
+                maximals.append(i)
+
+        correct_spikes = 0
+
+        for result, value in zip(batch[1], spikes):
+            if result:
+                if value in maximals:
+                    correct_spikes += value
+
+        return round((correct_spikes / (spikes_count or 1)) * 100, 1), spikes
+    
+    def train(self, train_data, iterations, iteration_step):
+        counter = 0
+        for _ in range(iterations):
+            batch = random.choice(train_data)
+            for i in range(iteration_step):
+                self.iteration(counter, batch[0])
+                if i % 5 == 0:
+                    if self.get_outputs(reLU=True) == batch[1]:
+                        self.DOPHAMIN += 0.5
+                    else:
+                        self.DOPHAMIN -= 0.1
+                counter += 1
