@@ -5,7 +5,7 @@ class Neuron:
     def __init__(self, neurons_list):
         self.state = False
         self.links = []  # [индекс, возраст, вес]
-        self.stair = 0.5    # Порог активации
+        self.min_stair = 0.1    # Порог активации
         self.value = 0.0    # Мембранный потенциал
         self.activates = 0
         self.last_activates = []
@@ -133,7 +133,7 @@ class Neuron:
             self.nn[index]._add_link(self.id, self.nn._BASE_OLD, random.uniform(-0.5,0))
 
 
-    def get_activation_chain(self, neurons: list) -> list:
+    def get_activation_chain(self, neurons: list, interval: int) -> list:
         """
         Узнаёт активировались ли нейроны последовательно и возвращает порядок активации или None
         """
@@ -148,10 +148,25 @@ class Neuron:
         # neurons.index: [00, 01, 02, 03, 04, 05, 06] -> [03, 01, 06, 02, 00]
 
         sorted_neurons.sort(key=lambda n: n.spike_iteration)
+        sorted_neurons.reverse()
+
+        oldest = -1
+
+        for neuron in sorted_neurons:
+            if neuron.spike_iteration - oldest > interval:
+                if neuron.spike_iteration - oldest > neuron.spike_iteration: continue
+                sorted_neurons = sorted_neurons[:sorted_neurons.index(neuron)]
+                sorted_neurons.reverse()
+                break
+
+            oldest = neuron.spike_iteration
+
+
+        
         return sorted_neurons if sorted_neurons else None
 
 
-    def hebbs_rule(self) -> None:
+    def hebbs_rule(self, interval: int) -> None:
         """
         Правило Хебба: нейроны активирующиеся вместе, связываются.
         Расчитывает цепочку активации нейронов в зависимости он номера итерации на котором они были активированны.
@@ -163,7 +178,7 @@ class Neuron:
 
         for _ in connected:
             if self._is_need_correction():
-                chain = self.get_activation_chain([self] + [self.nn[i] for i in self._get_radius()])
+                chain = self.get_activation_chain([self] + [self.nn[i] for i in self._get_radius()], interval)
                 if self in chain:
                     self_index = chain.index(self)
 
@@ -206,7 +221,7 @@ class Neuron:
     
 
     def effective_stair(self):
-        effective_stair = self.stair * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5)
+        effective_stair = 0.5 * (1.0 + (self.nn.SEROTONIN - 1.0) * 0.5) #0.5 base stair
         effective_stair = max(0.1, effective_stair)
 
         return effective_stair
@@ -235,7 +250,7 @@ class Neuron:
             self.spike_iteration = iteration
             self._next_state(True)
             self.state = True
-            self.value = effective_stair # или -= self.stair
+            self.value = max(self.min_stair, self.value - effective_stair) # или -= self.stair
             self.activates += 1
             if self.id not in self.nn.active_neurons:
                 self.nn.active_neurons.append(self.id)

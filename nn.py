@@ -68,7 +68,7 @@ class SpikeNeuralNetwork:
     def get_outputs(self, reLU: bool = False) -> list:
         """Возвращает сырые данные из нейросети или с применённой активацией в зависимости от параметра."""
         if reLU:
-            return [1 if neuron.value > neuron.stair else 0 for neuron in self.output_neurons]
+            return [1 if neuron.value > neuron.effective_stair() else 0 for neuron in self.output_neurons]
         else:
             return [neuron.value for neuron in self.output_neurons]
 
@@ -82,7 +82,7 @@ class SpikeNeuralNetwork:
                     link[2] /= total_abs_weight
     
 
-    def iteration(self, iteration: int, inputs: list = None, reLU: bool = False) -> list:
+    def iteration(self, iteration: int, interval: int, inputs: list = None, reLU: bool = False) -> list:
         """
         Производит один шаг в нейросети с поддержкой нейропластичности и возвращает результат работы.
         Удалает старые связи; Подставляет входные значения;
@@ -99,7 +99,7 @@ class SpikeNeuralNetwork:
             neuron.random_inhibitory()
 
         for neuron in self.neurons:
-            neuron.hebbs_rule()
+            neuron.hebbs_rule(interval)
 
         for neuron in self.neurons:
             neuron.reLU(iteration)
@@ -126,14 +126,14 @@ class SpikeNeuralNetwork:
                 else:
                     raise RuntimeError("Value not associated with any input neuron.")
                 
-    def test_result(self, batch):
+    def test_result(self, batch, interval: int):
         for i in self:
             i.spike_itertion = -1
             i.value = 0.0
 
         results = []
         for i in range(0, 100, 1):
-            result = self.iteration(i, batch[0], reLU=True)
+            result = self.iteration(i, interval, batch[0], reLU=True)
             results.append(
                 result
             )
@@ -150,7 +150,7 @@ class SpikeNeuralNetwork:
             if i:
                 correct += 1
 
-        maximals = [0 for i in range(correct)]
+        maximals = [0 for _ in range(correct)]
 
         maximum = 0
         for i in spikes:
@@ -173,7 +173,7 @@ class SpikeNeuralNetwork:
         for _ in range(iterations):
             batch = random.choice(train_data)
             for i in range(iteration_step):
-                self.iteration(counter, batch[0])
+                self.iteration(counter, iteration_step, batch[0])
                 if i % 5 == 0:
                     if self.get_outputs(reLU=True) == batch[1]:
                         self.DOPHAMIN += 0.5
